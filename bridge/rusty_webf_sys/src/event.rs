@@ -1,8 +1,9 @@
 /*
 * Copyright (C) 2022-present The WebF authors. All rights reserved.
 */
-use std::ffi::{c_char, c_double, c_void};
+use std::ffi::{c_char, c_double, c_void, CString};
 use crate::{element::Element, event_target::{EventTarget, EventTargetMethods, EventTargetRustMethods}, exception_state::ExceptionState, executing_context::ExecutingContext, OpaquePtr, RustValue};
+use crate::executing_context::EventOptions;
 
 #[repr(C)]
 pub struct EventRustMethods {
@@ -136,5 +137,33 @@ impl Drop for Event {
     unsafe {
       ((*self.method_pointer).release)(self.ptr);
     }
+  }
+}
+
+impl ExecutingContext {
+  pub fn new_event(&self, event_type: &str, exception_state: &ExceptionState) -> Result<Event, String> {
+    let event_type_c_string = CString::new(event_type).unwrap();
+    let new_event = unsafe {
+      ((*self.method_pointer).new_event)(self.ptr, event_type_c_string.as_ptr(), exception_state.ptr)
+    };
+
+    if exception_state.has_exception() {
+      return Err(exception_state.stringify(self));
+    }
+
+    return Ok(Event::initialize(new_event.value, self, new_event.method_pointer));
+  }
+
+  pub fn new_event_with_options(&self, event_type: &str, options: &EventOptions,  exception_state: &ExceptionState) -> Result<Event, String> {
+    let event_type_c_string = CString::new(event_type).unwrap();
+    let new_event = unsafe {
+      ((*self.method_pointer).new_event_with_options)(self.ptr, event_type_c_string.as_ptr(), options, exception_state.ptr)
+    };
+
+    if exception_state.has_exception() {
+      return Err(exception_state.stringify(self));
+    }
+
+    return Ok(Event::initialize(new_event.value, self, new_event.method_pointer));
   }
 }

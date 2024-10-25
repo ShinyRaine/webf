@@ -2,15 +2,22 @@
 * Copyright (C) 2022-present The WebF authors. All rights reserved.
 */
 
-use std::ffi::{c_char, c_double, c_void};
+use std::ffi::{c_char, c_double, c_void, CString};
 use std::ptr;
 use libc;
 use libc::c_uint;
 use crate::document::{Document, DocumentRustMethods};
-use crate::event_target::EventTargetMethods;
+use crate::event_target::{EventTargetMethods};
 use crate::exception_state::{ExceptionState, ExceptionStateRustMethods};
 use crate::{OpaquePtr, RustValue};
+use crate::event::{Event, EventRustMethods};
 use crate::window::{Window, WindowRustMethods};
+#[repr(C)]
+pub struct EventOptions {
+  pub bubbles: bool,
+  pub cancelable: bool,
+  pub composed: bool,
+}
 
 #[repr(C)]
 pub struct ExecutingContextRustMethods {
@@ -18,6 +25,8 @@ pub struct ExecutingContextRustMethods {
   pub get_document: extern "C" fn(*const OpaquePtr) -> RustValue<DocumentRustMethods>,
   pub get_window: extern "C" fn(*const OpaquePtr) -> RustValue<WindowRustMethods>,
   pub create_exception_state: extern "C" fn() -> RustValue<ExceptionStateRustMethods>,
+  pub new_event: extern "C" fn(*const OpaquePtr, *const c_char, exception_state: *const OpaquePtr ) -> RustValue<EventRustMethods>,
+  pub new_event_with_options: extern "C" fn(*const OpaquePtr, *const c_char, options: *const EventOptions, exception_state: *const OpaquePtr ) -> RustValue<EventRustMethods>,
 }
 
 /// An environment contains all the necessary running states of a web page.
@@ -38,7 +47,7 @@ pub struct ExecutingContext {
   // The underlying pointer points to the actual implementation of ExecutionContext in the C++ world.
   pub ptr: *const OpaquePtr,
   // Methods available for export from the C++ world for use.
-  method_pointer: *const ExecutingContextRustMethods,
+  pub(crate) method_pointer: *const ExecutingContextRustMethods,
 }
 
 impl ExecutingContext {
@@ -78,4 +87,3 @@ impl ExecutingContext {
     ExceptionState::initialize(result.value, result.method_pointer)
   }
 }
-

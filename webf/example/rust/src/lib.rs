@@ -5,6 +5,7 @@ use webf_sys::{element, initialize_webf_api, RustValue};
 use webf_sys::element::Element;
 use webf_sys::event_target::{AddEventListenerOptions, EventTarget, EventTargetMethods};
 use webf_sys::node::NodeMethods;
+use webf_sys::executing_context::EventOptions;
 
 #[no_mangle]
 pub extern "C" fn init_webf_app(handle: RustValue<ExecutingContextRustMethods>) -> *mut c_void {
@@ -12,7 +13,12 @@ pub extern "C" fn init_webf_app(handle: RustValue<ExecutingContextRustMethods>) 
   let exception_state = context.create_exception_state();
   let document = context.document();
 
-  let click_event = document.create_event("custom_click", &exception_state).unwrap();
+  let options = EventOptions {
+    bubbles: false,
+    cancelable: false,
+    composed: false
+  };
+  let click_event = context.new_event_with_options("custom_click", &options, &exception_state).unwrap();
   document.dispatch_event(&click_event, &exception_state);
 
   let div_element = document.create_element("div", &exception_state).unwrap();
@@ -77,6 +83,7 @@ pub extern "C" fn init_webf_app(handle: RustValue<ExecutingContextRustMethods>) 
   event_cleaner_element.add_event_listener("click", event_cleaner_handler, &event_listener_options, &exception_state).unwrap();
 
   document.body().append_child(&event_cleaner_element.as_node(), &exception_state).unwrap();
+
 
   std::ptr::null_mut()
 }
